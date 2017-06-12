@@ -24,6 +24,7 @@ app.controller('TrackController', function($scope) {
   var color_palette = ['red', 'blue', 'green', 'yellow', 'magenta', 'cyan'];
   $scope.color_palette = color_palette;
 
+  var trackLayers = {};
   var trackPosMarker = L.circleMarker([51.505, -0.09], { radius: 7 });
 
   var map = L.map('mapid').setView([51.505, -0.09], 13);
@@ -85,7 +86,10 @@ app.controller('TrackController', function($scope) {
         color: color_palette[track.index % color_palette.length]
       }
     }).on('loaded', function(e) {
-      console.log(e);
+      if(e.target.getLayers().length > 1) {
+        alert('oops, that gpx file has more than one sub track or some waypoints or something. not sure i can handle that in this alpha stage...'); 
+      }
+      trackLayers[track.index] = e.target.getLayers()[0];
       map.fitBounds(e.target.getBounds());
     }).addTo(map)
     .on('click', function(e) {
@@ -127,8 +131,24 @@ app.controller('TrackController', function($scope) {
       points.splice($scope.selection.point.index + 1);
     } else {
       console.log('where must be either before or after, was ' + where);
+      return;
     }
     $scope.selection.layer.setLatLngs(points);
+  };
+
+  $scope.mergeTrack = function(direction, other) {
+    var selectedPoints = $scope.selection.layer.getLatLngs();
+    var otherPoints = trackLayers[other.index].getLatLngs();
+    var newPoints;
+    if(direction === 'prepend') {
+      newPoints = otherPoints.concat(selectedPoints);
+    } else if(direction === 'append') {
+      newPoints = selectedPoints.concat(otherPoints);
+    } else {
+      console.log('direction must be either prepend or append, was ' + where);
+      return;
+    }
+    $scope.selection.layer.setLatLngs(newPoints);
   };
 });
 
@@ -202,6 +222,17 @@ app.directive("gpxTrackUpload",function(){
             </form>
             <button class="btn btn-default" ng-click="trimTrack('before')">Trim Before</button>
             <button class="btn btn-default" ng-click="trimTrack('after')">Trim After</button>
+
+            <h4>Merge tracks</h4>
+
+            <ul class="list-unstyled">
+              <li ng-repeat="track in tracks | filter: { index: '!' + selection.track.index } track by track.name">
+                <span class="glyphicon glyphicon-minus" style="color: {{color_palette[track.index % color_palette.length]}};"></span>
+                {{track.name}}
+                <button type="button" class="btn btn-default btn-xs" ng-click="mergeTrack('prepend', track)">Prepend</button>
+                <button type="button" class="btn btn-default btn-xs" ng-click="mergeTrack('append', track)">Append</button>
+              </li>
+            </ul>
           </div>
         </div>
         <div class="col-md-9">
