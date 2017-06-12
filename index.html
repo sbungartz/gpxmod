@@ -117,6 +117,19 @@ app.controller('TrackController', function($scope) {
 
     $scope.$digest();
   };
+
+  $scope.trimTrack = function(where) {
+    var points = $scope.selection.layer.getLatLngs();
+    if(where === 'before') {
+      points = points.splice($scope.selection.point.index);
+      $scope.selectedPointIndex = 0;
+    } else if(where === 'after') {
+      points.splice($scope.selection.point.index + 1);
+    } else {
+      console.log('where must be either before or after, was ' + where);
+    }
+    $scope.selection.layer.setLatLngs(points);
+  };
 });
 
 app.directive("gpxTrackUpload",function(){    
@@ -179,10 +192,16 @@ app.directive("gpxTrackUpload",function(){
               <small>{{selection.track.name}}</small>
             </div>
 
-            <form>
-              <input type="number" ng-model="selectedPointIndex"/>
-              {{selection.point.latlng}}
+            <form class="form form-inline">
+              <div class="row">
+                <div class="col-md-12">
+                  <input class="form-control" type="number" ng-model="selectedPointIndex"/>
+                  {{selection.point.latlng}}
+                </div>
+              </div>
             </form>
+            <button class="btn btn-default" ng-click="trimTrack('before')">Trim Before</button>
+            <button class="btn btn-default" ng-click="trimTrack('after')">Trim After</button>
           </div>
         </div>
         <div class="col-md-9">
