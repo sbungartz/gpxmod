@@ -57,7 +57,24 @@ app.controller('TrackController', function($scope) {
     };
   }
 
-  $scope.addTrack = function(index, track) {
+  $scope.$watchCollection('selection', function(newSelection, oldSelection) {
+    if(newSelection) {
+      trackPosMarker.setLatLng(newSelection.point.latlng).setStyle({color: newSelection.layer.options.color}).addTo(map);
+      $scope.selectedPointIndex = newSelection.point.index;
+    }
+  });
+
+  $scope.$watch('selectedPointIndex', function(newIndex, oldIndex) {
+    if(newIndex && $scope.selection) {
+      var newLatLng = $scope.selection.layer.getLatLngs()[newIndex];
+      $scope.selection.point = {
+        index: newIndex,
+        latlng: newLatLng
+      };
+    }
+  });
+
+  $scope.addTrackToMap = function(track) {
     new L.GPX(track.gpx, {
       async: true,
       marker_options: {
@@ -65,7 +82,7 @@ app.controller('TrackController', function($scope) {
         endIconUrl: null
       },
       polyline_options: {
-        color: color_palette[i % color_palette.length]
+        color: color_palette[track.index % color_palette.length]
       }
     }).on('loaded', function(e) {
       console.log(e);
@@ -73,22 +90,27 @@ app.controller('TrackController', function($scope) {
     }).addTo(map)
     .on('click', function(e) {
       var point = findClosestPoint(e.layer.getLatLngs(), e.latlng);
-      console.log(point.index, point.latlng);
-      trackPosMarker.setLatLng(point.latlng).setStyle({color: e.layer.options.color}).addTo(map);
+      $scope.selection = {
+        track: track,
+        layer: e.layer,
+        point: point
+      };
+      $scope.$digest();
     });
   };
 
   for(var i = 0; i < $scope.tracks.length; i++) {
-    $scope.addTrack(i, $scope.tracks[i]);
+    $scope.addTrackToMap($scope.tracks[i]);
   }
 
   $scope.newGpxTrackLoaded = function(filename, filecontent) {
     var newTrack = {
       name: filename,
-      gpx: filecontent
+      gpx: filecontent,
+      index: $scope.tracks.length
     };
 
-    $scope.addTrack($scope.tracks.length, newTrack);
+    $scope.addTrackToMap(newTrack);
 
     $scope.tracks.push(newTrack);
     localStorage.setItem('gpxmod-tracks', JSON.stringify($scope.tracks));
@@ -142,13 +164,26 @@ app.directive("gpxTrackUpload",function(){
 
           <ul class="list-unstyled">
             <li ng-repeat="track in tracks track by track.name">
-              <span class="glyphicon glyphicon-minus" style="color: {{color_palette[$index % color_palette.length]}};"></span>
+              <span class="glyphicon glyphicon-minus" style="color: {{color_palette[track.index % color_palette.length]}};"></span>
               {{track.name}}
               <button type="button" class="btn btn-link btn-xs">
                 <span class="glyphicon glyphicon-trash"></span>
               </button>
             </li>
           </ul>
+
+          <h2>Editing</h2>
+          <div ng-show="selection">
+            <div>
+              <span class="glyphicon glyphicon-minus" ng-style="{'color': color_palette[selection.track.index % color_palette.length]}"></span>
+              <small>{{selection.track.name}}</small>
+            </div>
+
+            <form>
+              <input type="number" ng-model="selectedPointIndex"/>
+              {{selection.point.latlng}}
+            </form>
+          </div>
         </div>
         <div class="col-md-9">
           <div id="mapid"></div>
