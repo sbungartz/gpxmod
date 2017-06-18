@@ -89,8 +89,10 @@ app.controller('TrackController', function($scope) {
       if(e.target.getLayers().length > 1) {
         alert('oops, that gpx file has more than one sub track or some waypoints or something. not sure i can handle that in this alpha stage...'); 
       }
+      track.distance = e.target.get_distance();
       trackLayers[track.index] = e.target.getLayers()[0];
       map.fitBounds(e.target.getBounds());
+      $scope.$digest();
     }).addTo(map)
     .on('click', function(e) {
       var point = findClosestPoint(e.layer.getLatLngs(), e.latlng);
@@ -122,6 +124,22 @@ app.controller('TrackController', function($scope) {
     $scope.$digest();
   };
 
+  function calculateTotalDistance(ps) {
+    var total = 0;
+    var lastPoint = ps[0];
+    for(var i = 1; i < ps.length; i++) {
+      total += lastPoint.distanceTo(ps[i]);
+    }
+    return total;
+  }
+
+  $scope.updateTrackDistance = function(track) {
+    console.log(track.index);
+    console.log(trackLayers);
+    var points = trackLayers[track.index].getLatLngs();
+    track.distance = calculateTotalDistance(points);
+  };
+
   $scope.trimTrack = function(where) {
     var points = $scope.selection.layer.getLatLngs();
     if(where === 'before') {
@@ -134,6 +152,7 @@ app.controller('TrackController', function($scope) {
       return;
     }
     $scope.selection.layer.setLatLngs(points);
+    $scope.updateTrackDistance($scope.selection.track);
   };
 
   $scope.mergeTrack = function(direction, other) {
@@ -149,6 +168,7 @@ app.controller('TrackController', function($scope) {
       return;
     }
     $scope.selection.layer.setLatLngs(newPoints);
+    $scope.updateTrackDistance($scope.selection.track);
   };
 });
 
@@ -199,6 +219,7 @@ app.directive("gpxTrackUpload",function(){
             <li ng-repeat="track in tracks track by track.name">
               <span class="glyphicon glyphicon-minus" style="color: {{color_palette[track.index % color_palette.length]}};"></span>
               {{track.name}}
+              <span ng-show="track.distance">- {{track.distance | number: 2}} m</span>
               <button type="button" class="btn btn-link btn-xs">
                 <span class="glyphicon glyphicon-trash"></span>
               </button>
