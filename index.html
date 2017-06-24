@@ -20,6 +20,22 @@
 <script>
 var app = angular.module('gpxmod', []);
 
+function downloadXml(filename, data) {
+  var blob = new Blob([data], {type: 'text/xml'});
+  if(window.navigator.msSaveOrOpenBlob) {
+    window.navigator.msSaveBlob(blob, filename);
+  }
+  else{
+    var elem = window.document.createElement('a');
+    elem.href = window.URL.createObjectURL(blob);
+    elem.download = filename;        
+    document.body.appendChild(elem);
+    elem.click();        
+    document.body.removeChild(elem);
+    window.URL.revokeObjectURL(elem.href);
+  }
+}
+
 app.controller('TrackController', function($scope) {
   var color_palette = ['red', 'blue', 'green', 'yellow', 'magenta', 'cyan'];
   $scope.color_palette = color_palette;
@@ -59,15 +75,15 @@ app.controller('TrackController', function($scope) {
   }
 
   $scope.$watchCollection('selection', function(newSelection, oldSelection) {
-    if(newSelection) {
-      trackPosMarker.setLatLng(newSelection.point.latlng).setStyle({color: newSelection.layer.options.color}).addTo(map);
+    if(newSelection && newSelection.point.latlng) {
+      trackPosMarker.setLatLng(newSelection.point.latlng).setStyle({color: trackLayers[newSelection.track.index].options.color}).addTo(map);
       $scope.selectedPointIndex = newSelection.point.index;
     }
   });
 
   $scope.$watch('selectedPointIndex', function(newIndex, oldIndex) {
-    if(newIndex && $scope.selection) {
-      var newLatLng = $scope.selection.layer.getLatLngs()[newIndex];
+    if(newIndex !== undefined && $scope.selection) {
+      var newLatLng = trackLayers[$scope.selection.track.index].getLatLngs()[newIndex];
       $scope.selection.point = {
         index: newIndex,
         latlng: newLatLng
@@ -75,8 +91,8 @@ app.controller('TrackController', function($scope) {
     }
   });
 
-  $scope.addTrackToMap = function(track) {
-    new L.GPX(track.gpx, {
+  $scope.addTrackToMap = function(track, focusTrack, selectedPointIndex) {
+    var g = new L.GPX(track.gpx, {
       async: true,
       marker_options: {
         startIconUrl: null,
@@ -90,15 +106,22 @@ app.controller('TrackController', function($scope) {
         alert('oops, that gpx file has more than one sub track or some waypoints or something. not sure i can handle that in this alpha stage...'); 
       }
       track.distance = e.target.get_distance();
+      if(trackLayers[track.index]) {
+        map.removeLayer(trackLayers[track.index]);
+      }
       trackLayers[track.index] = e.target.getLayers()[0];
-      map.fitBounds(e.target.getBounds());
+      if(focusTrack) {
+        map.fitBounds(e.target.getBounds());
+      }
+      if(selectedPointIndex !== null) {
+        $scope.selectedPointIndex = selectedPointIndex;
+      }
       $scope.$digest();
     }).addTo(map)
     .on('click', function(e) {
       var point = findClosestPoint(e.layer.getLatLngs(), e.latlng);
       $scope.selection = {
         track: track,
-        layer: e.layer,
         point: point
       };
       $scope.$digest();
@@ -106,7 +129,7 @@ app.controller('TrackController', function($scope) {
   };
 
   for(var i = 0; i < $scope.tracks.length; i++) {
-    $scope.addTrackToMap($scope.tracks[i]);
+    $scope.addTrackToMap($scope.tracks[i], true, null);
   }
 
   $scope.newGpxTrackLoaded = function(filename, filecontent) {
@@ -116,7 +139,7 @@ app.controller('TrackController', function($scope) {
       index: $scope.tracks.length
     };
 
-    $scope.addTrackToMap(newTrack);
+    $scope.addTrackToMap(newTrack, true, null);
 
     $scope.tracks.push(newTrack);
     localStorage.setItem('gpxmod-tracks', JSON.stringify($scope.tracks));
@@ -124,51 +147,81 @@ app.controller('TrackController', function($scope) {
     $scope.$digest();
   };
 
-  function calculateTotalDistance(ps) {
-    var total = 0;
-    var lastPoint = ps[0];
-    for(var i = 1; i < ps.length; i++) {
-      total += lastPoint.distanceTo(ps[i]);
-    }
-    return total;
-  }
-
-  $scope.updateTrackDistance = function(track) {
-    console.log(track.index);
-    console.log(trackLayers);
-    var points = trackLayers[track.index].getLatLngs();
-    track.distance = calculateTotalDistance(points);
-  };
-
   $scope.trimTrack = function(where) {
-    var points = $scope.selection.layer.getLatLngs();
+    var parser = new DOMParser();
+
+    var doc = parser.parseFromString($scope.selection.track.gpx, 'text/xml');
+    var trkseg = doc.getElementsByTagName('trkseg')[0];
+
     if(where === 'before') {
-      points = points.splice($scope.selection.point.index);
-      $scope.selectedPointIndex = 0;
+      for(var i = 0; i < $scope.selection.point.index; i++) {
+        trkseg.removeChild(trkseg.children[0]);
+      }
+      $scope.selectedPointIndex = -1;
+      $scope.selection.track.gpx = new XMLSerializer().serializeToString(doc);
+      $scope.addTrackToMap($scope.selection.track, false, 0);
     } else if(where === 'after') {
-      points.splice($scope.selection.point.index + 1);
+      var lenBefore = trkseg.children.length;
+      for(var i = $scope.selection.point.index + 1; i < lenBefore; i++) {
+        trkseg.removeChild(trkseg.children[$scope.selection.point.index + 1]);
+      }
+      $scope.selection.track.gpx = new XMLSerializer().serializeToString(doc);
+      $scope.addTrackToMap($scope.selection.track, false, $scope.selectedPointIndex);
+      $scope.selectedPointIndex = -1;
     } else {
       console.log('where must be either before or after, was ' + where);
       return;
     }
-    $scope.selection.layer.setLatLngs(points);
-    $scope.updateTrackDistance($scope.selection.track);
+  };
+
+  $scope.flipTrack = function() {
+    var parser = new DOMParser();
+    doc = parser.parseFromString($scope.selection.track.gpx, 'text/xml');
+    var trkseg = doc.getElementsByTagName('trkseg')[0];
+
+    var buffer = [];
+    while(trkseg.children.length > 0) {
+      buffer.push(trkseg.removeChild(trkseg.children[0]));
+    }
+
+    for(var i = buffer.length - 1; i >= 0; i--) {
+      trkseg.appendChild(buffer[i]);
+    }
+
+    var newSelectionIndex = buffer.length - 1 - $scope.selection.point.index;
+    $scope.selectedPointIndex = -1;
+    $scope.selection.track.gpx = new XMLSerializer().serializeToString(doc);
+    $scope.addTrackToMap($scope.selection.track, false, newSelectionIndex);
   };
 
   $scope.mergeTrack = function(direction, other) {
-    var selectedPoints = $scope.selection.layer.getLatLngs();
-    var otherPoints = trackLayers[other.index].getLatLngs();
-    var newPoints;
+    var parser = new DOMParser();
+
+    var doc = parser.parseFromString($scope.selection.track.gpx, 'text/xml');
+    var trkseg = doc.getElementsByTagName('trkseg')[0];
+
+    var trksegOther = parser.parseFromString(other.gpx, 'text/xml').getElementsByTagName('trkseg')[0];
+
     if(direction === 'prepend') {
-      newPoints = otherPoints.concat(selectedPoints);
+      console.log('not implemented yet');
     } else if(direction === 'append') {
-      newPoints = selectedPoints.concat(otherPoints);
+      for(var i = 0; i < trksegOther.children.length; i++) {
+        trkseg.appendChild(trksegOther.children[i].cloneNode(true));
+      }
     } else {
       console.log('direction must be either prepend or append, was ' + where);
       return;
     }
-    $scope.selection.layer.setLatLngs(newPoints);
-    $scope.updateTrackDistance($scope.selection.track);
+
+    var selectionIndex = $scope.selection.point.index;
+    $scope.selectedPointIndex = -1;
+    $scope.selection.track.name = 'merged.gpx';
+    $scope.selection.track.gpx = new XMLSerializer().serializeToString(doc);
+    $scope.addTrackToMap($scope.selection.track, false, selectionIndex);
+  };
+
+  $scope.downloadTrack = function(track) {
+    downloadXml(track.name, track.gpx);
   };
 });
 
@@ -179,7 +232,6 @@ app.directive("gpxTrackUpload",function(){
       el.bind("change", function(evt){          
         if(!window.FileReader) return; // Browser is not compatible
 
-        console.log('readering');
         var reader = new FileReader();
 
         var file = evt.target.files[0];
@@ -223,6 +275,9 @@ app.directive("gpxTrackUpload",function(){
               <button type="button" class="btn btn-link btn-xs">
                 <span class="glyphicon glyphicon-trash"></span>
               </button>
+              <button type="button" class="btn btn-link btn-xs" ng-click="downloadTrack(track)">
+                <span class="glyphicon glyphicon-save"></span>
+              </button>
             </li>
           </ul>
 
@@ -243,6 +298,7 @@ app.directive("gpxTrackUpload",function(){
             </form>
             <button class="btn btn-default" ng-click="trimTrack('before')">Trim Before</button>
             <button class="btn btn-default" ng-click="trimTrack('after')">Trim After</button>
+            <button class="btn btn-default" ng-click="flipTrack()">Flip Track</button>
 
             <h4>Merge tracks</h4>
 
@@ -250,8 +306,8 @@ app.directive("gpxTrackUpload",function(){
               <li ng-repeat="track in tracks | filter: { index: '!' + selection.track.index } track by track.name">
                 <span class="glyphicon glyphicon-minus" style="color: {{color_palette[track.index % color_palette.length]}};"></span>
                 {{track.name}}
-                <button type="button" class="btn btn-default btn-xs" ng-click="mergeTrack('prepend', track)">Prepend</button>
-                <button type="button" class="btn btn-default btn-xs" ng-click="mergeTrack('append', track)">Append</button>
+                <button class="btn btn-default btn-xs" ng-click="mergeTrack('prepend', track)">Prepend</button>
+                <button class="btn btn-default btn-xs" ng-click="mergeTrack('append', track)">Append</button>
               </li>
             </ul>
           </div>
