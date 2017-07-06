@@ -174,7 +174,7 @@ app.controller('TrackController', function($scope) {
 
   $scope.flipTrack = function() {
     var parser = new DOMParser();
-    doc = parser.parseFromString($scope.selection.track.gpx, 'text/xml');
+    var doc = parser.parseFromString($scope.selection.track.gpx, 'text/xml');
     var trkseg = doc.getElementsByTagName('trkseg')[0];
 
     var buffer = [];
