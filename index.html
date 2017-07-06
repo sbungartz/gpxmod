@@ -263,6 +263,10 @@ app.directive("gpxTrackUpload",function(){
         <div class="col-md-3">
           <h1>GPXmod</h1>
 
+          <p class="help-block">
+            Add a GPX track by selecting the file below.
+          </p>
+
           <form id="myform">
             <p>
             <input type="file" gpx-track-upload/>
@@ -284,6 +288,9 @@ app.directive("gpxTrackUpload",function(){
           </ul>
 
           <h2>Editing</h2>
+          <p class="help-block" ng-hide="selection">
+            Click on a track on the map to select it.
+          </p>
           <div ng-show="selection">
             <div>
               <span class="glyphicon glyphicon-minus" ng-style="{'color': color_palette[selection.track.index % color_palette.length]}"></span>
