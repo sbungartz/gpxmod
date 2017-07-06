@@ -27,7 +27,7 @@ app.controller('TrackController', function($scope) {
   var trackPosMarker = L.circleMarker([0, 0], { radius: 7 });
 
   var map = L.map('mapid').setView([0, 0], 2);
-  L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: 'Map data &copy; 2013 OpenStreetMap contributors'
       }).addTo(map);
 
