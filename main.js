@@ -23,6 +23,7 @@ app.controller('TrackController', function($scope) {
   $scope.color_palette = color_palette;
 
   var trackLayers = {};
+
   var trackPosMarker = L.circleMarker([0, 0], { radius: 7 });
 
   var map = L.map('mapid').setView([0, 0], 2);
@@ -70,7 +71,8 @@ app.controller('TrackController', function($scope) {
       var newLatLng = trackLayers[$scope.selection.track.index].getLatLngs()[newIndex];
       $scope.selection.point = {
         index: newIndex,
-        latlng: newLatLng
+        latlng: newLatLng,
+        distFromStart: $scope.selection.track.libgpx.get_elevation_data()[newIndex][0]
       };
     }
   });
@@ -89,7 +91,9 @@ app.controller('TrackController', function($scope) {
       if(e.target.getLayers().length > 1) {
         alert('oops, that gpx file has more than one sub track or some waypoints or something. not sure i can handle that in this alpha stage...'); 
       }
-      track.distance = e.target.get_distance();
+      track.libgpx = e.target;
+      track.distance = track.libgpx.get_distance();
+      track.numPoints = track.libgpx.getLayers()[0].getLatLngs().length;
       if(trackLayers[track.index]) {
         map.removeLayer(trackLayers[track.index]);
       }

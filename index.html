@@ -62,7 +62,8 @@
             <form class="form form-inline">
               <div class="row">
                 <div class="col-md-12">
-                  <input class="form-control" type="number" ng-model="selectedPointIndex"/>
+                  <input class="form-control" type="number" min="0" max="{{selection.track.numPoints - 1 || 0}}" ng-model="selectedPointIndex"/>
+                  {{selection.point.distFromStart | number: 2}} km
                   {{selection.point.latlng}}
                 </div>
               </div>
