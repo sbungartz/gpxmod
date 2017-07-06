@@ -66,13 +66,23 @@ app.controller('TrackController', function($scope) {
     }
   });
 
+  // TODO Workaround for leaflet-gpx bug: actual distance is stored in next point. last point distance should be total track length.
+  function getDistanceFromStart(track, index) {
+    var data = track.libgpx.get_elevation_data();
+    if(index < data.length - 1) {
+      return data[index + 1][0];
+    } else {
+      return track.distance / 1000;
+    }
+  }
+
   $scope.$watch('selectedPointIndex', function(newIndex, oldIndex) {
-    if(newIndex !== undefined && $scope.selection) {
+    if(newIndex !== undefined && newIndex >= 0 && $scope.selection) {
       var newLatLng = trackLayers[$scope.selection.track.index].getLatLngs()[newIndex];
       $scope.selection.point = {
         index: newIndex,
         latlng: newLatLng,
-        distFromStart: $scope.selection.track.libgpx.get_elevation_data()[newIndex][0]
+        distFromStart: getDistanceFromStart($scope.selection.track, newIndex)
       };
     }
   });
