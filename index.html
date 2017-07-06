@@ -41,19 +41,21 @@ app.controller('TrackController', function($scope) {
   $scope.color_palette = color_palette;
 
   var trackLayers = {};
-  var trackPosMarker = L.circleMarker([51.505, -0.09], { radius: 7 });
+  var trackPosMarker = L.circleMarker([0, 0], { radius: 7 });
 
-  var map = L.map('mapid').setView([51.505, -0.09], 13);
+  var map = L.map('mapid').setView([0, 0], 2);
   L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: 'Map data &copy; 2013 OpenStreetMap contributors'
       }).addTo(map);
 
-  function loadFromStorage(key, defaultValue) {
-    var value = localStorage.getItem('gpxmod-tracks');
-    return (value && JSON.parse(value)) || defaultValue;
-  }
+  // No localStorage for now...
+  //function loadFromStorage(key, defaultValue) {
+  //  var value = localStorage.getItem('gpxmod-tracks');
+  //  return (value && JSON.parse(value)) || defaultValue;
+  //}
 
-  $scope.tracks = loadFromStorage('gpxmod-tracks', []);
+  //$scope.tracks = loadFromStorage('gpxmod-tracks', []);
+  $scope.tracks = [];
 
   function findClosestPoint(ps, p) {
     var closestIndex = -1;
@@ -142,7 +144,7 @@ app.controller('TrackController', function($scope) {
     $scope.addTrackToMap(newTrack, true, null);
 
     $scope.tracks.push(newTrack);
-    localStorage.setItem('gpxmod-tracks', JSON.stringify($scope.tracks));
+    //localStorage.setItem('gpxmod-tracks', JSON.stringify($scope.tracks));
 
     $scope.$digest();
   };
@@ -272,9 +274,9 @@ app.directive("gpxTrackUpload",function(){
               <span class="glyphicon glyphicon-minus" style="color: {{color_palette[track.index % color_palette.length]}};"></span>
               {{track.name}}
               <span ng-show="track.distance">- {{track.distance | number: 2}} m</span>
-              <button type="button" class="btn btn-link btn-xs">
+              <!-- <button type="button" class="btn btn-link btn-xs">
                 <span class="glyphicon glyphicon-trash"></span>
-              </button>
+              </button> -->
               <button type="button" class="btn btn-link btn-xs" ng-click="downloadTrack(track)">
                 <span class="glyphicon glyphicon-save"></span>
               </button>
