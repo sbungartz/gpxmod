@@ -122,6 +122,7 @@ app.controller('TrackController', function($scope) {
       if(selectedPointIndex !== null) {
         $scope.selectedPointIndex = selectedPointIndex;
       }
+
       $scope.$digest();
     }).addTo(map)
     .on('click', function(e) {
@@ -143,7 +144,8 @@ app.controller('TrackController', function($scope) {
       id: next_track_id++,
       name: filename,
       gpx: filecontent,
-      color: nextColorFromPalette()
+      color: nextColorFromPalette(),
+      marks: {}
     };
 
     $scope.addTrackToMap(newTrack, true, null);
@@ -170,6 +172,37 @@ app.controller('TrackController', function($scope) {
     }
 
     map.removeLayer(track.libgpx);
+  };
+
+  $scope.addMark = function(track, index) {
+    if(track.marks[index] == null) {
+      var latlng = track.line.getLatLngs()[index];
+      var mark = {
+        point: {
+          index: index,
+          latlng: latlng
+        }
+      };
+      mark.marker = L.circleMarker(latlng, {
+        radius: 4,
+        color: track.color,
+        fillOpacity: 1.0}
+      ).on('click', function(e) {
+        $scope.selection = {
+          track: track,
+          point: mark.point
+        };
+        $scope.$digest();
+      }).addTo(map);
+      track.marks[index] = mark;
+    }
+  };
+
+  $scope.removeMark = function(track, index) {
+    if(track.marks[index] != null) {
+      map.removeLayer(track.marks[index].marker);
+      delete track.marks[index];
+    }
   };
 
   $scope.trimTrack = function(where) {

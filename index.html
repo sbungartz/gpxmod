@@ -72,6 +72,10 @@
             <button class="btn btn-default" ng-click="trimTrack('after')">Trim After</button>
             <button class="btn btn-default" ng-click="flipTrack()">Flip Track</button>
 
+            <h4>Splitting</h4>
+            <button class="btn btn-default" ng-hide="selection.track.marks[selection.point.index]" ng-click="addMark(selection.track, selection.point.index)">Add Mark</button>
+            <button class="btn btn-default" ng-show="selection.track.marks[selection.point.index]" ng-click="removeMark(selection.track, selection.point.index)">Remove Mark</button>
+
             <h4>Merge tracks</h4>
 
             <ul class="list-unstyled">
