@@ -171,6 +171,9 @@ app.controller('TrackController', function($scope) {
       $scope.selection = null;
     }
 
+    for(var markIndex in track.marks) {
+      map.removeLayer(track.marks[markIndex].marker);
+    }
     map.removeLayer(track.libgpx);
   };
 
@@ -205,6 +208,18 @@ app.controller('TrackController', function($scope) {
     }
   };
 
+  function updateMarkIndices(track, calcNewIndex) {
+    var marks = [];
+    for(var i in track.marks) {
+      marks.push(track.marks[i]);
+      delete track.marks[i];
+    }
+    for(var i = 0; i < marks.length; i++) {
+      marks[i].point.index = calcNewIndex(marks[i].point.index);
+      track.marks[marks[i].point.index] = marks[i];
+    }
+  }
+
   $scope.trimTrack = function(where) {
     var parser = new DOMParser();
 
@@ -212,16 +227,21 @@ app.controller('TrackController', function($scope) {
     var trkseg = doc.getElementsByTagName('trkseg')[0];
 
     if(where === 'before') {
-      for(var i = 0; i < $scope.selection.point.index; i++) {
-        trkseg.removeChild(trkseg.children[0]);
+      for(var i = $scope.selection.point.index - 1; i >= 0; i--) {
+        trkseg.removeChild(trkseg.children[i]);
+        $scope.removeMark($scope.selection.track, i);
       }
+      updateMarkIndices($scope.selection.track, function(oldIndex) {
+        return oldIndex - $scope.selection.point.index;
+      });
       $scope.selectedPointIndex = -1;
       $scope.selection.track.gpx = new XMLSerializer().serializeToString(doc);
       $scope.addTrackToMap($scope.selection.track, false, 0);
     } else if(where === 'after') {
       var lenBefore = trkseg.children.length;
-      for(var i = $scope.selection.point.index + 1; i < lenBefore; i++) {
-        trkseg.removeChild(trkseg.children[$scope.selection.point.index + 1]);
+      for(var i = trkseg.children.length - 1; i > $scope.selection.point.index; i--) {
+        trkseg.removeChild(trkseg.children[i]);
+        $scope.removeMark($scope.selection.track, i);
       }
       $scope.selection.track.gpx = new XMLSerializer().serializeToString(doc);
       $scope.addTrackToMap($scope.selection.track, false, $scope.selectedPointIndex);
@@ -245,6 +265,10 @@ app.controller('TrackController', function($scope) {
     for(var i = buffer.length - 1; i >= 0; i--) {
       trkseg.appendChild(buffer[i]);
     }
+
+    updateMarkIndices($scope.selection.track, function(oldIndex) {
+      return buffer.length - 1 - oldIndex;
+    });
 
     var newSelectionIndex = buffer.length - 1 - $scope.selection.point.index;
     $scope.selectedPointIndex = -1;
