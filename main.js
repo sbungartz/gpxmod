@@ -19,6 +19,8 @@ function downloadXml(filename, data) {
 }
 
 app.controller('TrackController', function($scope) {
+  $scope.splitMarkerInterval = 100;
+
   var color_palette = ['red', 'blue', 'green', 'yellow', 'magenta', 'cyan'];
   var next_color_index = 0;
   var next_track_id = 0;
@@ -75,11 +77,11 @@ app.controller('TrackController', function($scope) {
 
   // TODO Workaround for leaflet-gpx bug: actual distance is stored in next point. last point distance should be total track length.
   function getDistanceFromStart(track, index) {
-    var data = track.libgpx.get_elevation_data();
+    var data = track.elevationData;
     if(index < data.length - 1) {
       return data[index + 1][0];
     } else {
-      return track.distance / 1000;
+      return track.distance;
     }
   }
 
@@ -112,7 +114,8 @@ app.controller('TrackController', function($scope) {
         map.removeLayer(track.libgpx);
       }
       track.libgpx = e.target;
-      track.distance = track.libgpx.get_distance();
+      track.elevationData = track.libgpx.get_elevation_data();
+      track.distance = track.libgpx.get_distance() / 1000;
       track.line = track.libgpx.getLayers()[0];
       track.numPoints = track.line.getLatLngs().length;
 
@@ -307,6 +310,29 @@ app.controller('TrackController', function($scope) {
         $scope.addMark(track, newMarkIndices[i]);
       }
     });
+  };
+
+  $scope.placeRegularMarksOnTrack = function(track) {
+    if(track == null){
+      return;
+    }
+
+    var newInterval = $scope.splitMarkerInterval;
+    for(var i in track.marks) {
+      $scope.removeMark(track, i);
+    }
+
+    if($scope.splitMarkerInterval == 0) {
+      return;
+    }
+
+    var m = 1;
+    for(var i = 0; i < track.numPoints; i++) {
+      if(getDistanceFromStart(track, i) >= m * newInterval) {
+        $scope.addMark(track, i);
+        m += 1;
+      }
+    }
   };
 
   $scope.downloadTrack = function(track) {

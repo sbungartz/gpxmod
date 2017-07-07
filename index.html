@@ -39,7 +39,7 @@
             <li ng-repeat="track in tracks track by track.id">
               <span class="glyphicon glyphicon-minus" style="color: {{track.color}};"></span>
               {{track.name}}
-              <span ng-show="track.distance">- {{track.distance | number: 2}} m</span>
+              <span ng-show="track.distance">- {{track.distance | number: 2}} km</span>
               <button type="button" class="btn btn-link btn-xs" ng-click="removeTrack(track)">
                 <span class="glyphicon glyphicon-trash"></span>
               </button>
@@ -73,6 +73,14 @@
             <button class="btn btn-default" ng-click="flipTrack()">Flip Track</button>
 
             <h4>Splitting</h4>
+            <form class="form form-inline">
+              <button class="btn btn-default" ng-click="placeRegularMarksOnTrack(selection.track)">Place Marks</button>
+              every
+              <input class="form-control" type="number" min="0" max="{{selection.track.distance || 0}}" ng-model="splitMarkerInterval" />
+              km
+              <p class="help-block">Note: Placing regular spaced marks discards all other marks!</p>
+            </form>
+
             <button class="btn btn-default" ng-hide="selection.track.marks[selection.point.index]" ng-click="addMark(selection.track, selection.point.index)">Add Mark</button>
             <button class="btn btn-default" ng-show="selection.track.marks[selection.point.index]" ng-click="removeMark(selection.track, selection.point.index)">Remove Mark</button>
 
