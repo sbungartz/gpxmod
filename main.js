@@ -94,7 +94,7 @@ app.controller('TrackController', function($scope) {
     }
   });
 
-  $scope.addTrackToMap = function(track, focusTrack, selectedPointIndex) {
+  $scope.addTrackToMap = function(track, onLoaded) {
     var g = new L.GPX(track.gpx, {
       async: true,
       marker_options: {
@@ -116,11 +116,8 @@ app.controller('TrackController', function($scope) {
       track.line = track.libgpx.getLayers()[0];
       track.numPoints = track.line.getLatLngs().length;
 
-      if(focusTrack) {
-        map.fitBounds(e.target.getBounds());
-      }
-      if(selectedPointIndex !== null) {
-        $scope.selectedPointIndex = selectedPointIndex;
+      if(onLoaded != null) {
+        onLoaded(track);
       }
 
       $scope.$digest();
@@ -135,10 +132,6 @@ app.controller('TrackController', function($scope) {
     });
   };
 
-  for(var i = 0; i < $scope.tracks.length; i++) {
-    $scope.addTrackToMap($scope.tracks[i], true, null);
-  }
-
   $scope.newGpxTrackLoaded = function(filename, filecontent) {
     var newTrack = {
       id: next_track_id++,
@@ -148,7 +141,9 @@ app.controller('TrackController', function($scope) {
       marks: {}
     };
 
-    $scope.addTrackToMap(newTrack, true, null);
+    $scope.addTrackToMap(newTrack, function(track) {
+      map.fitBounds(track.libgpx.getBounds());
+    });
 
     $scope.tracks.push(newTrack);
     //localStorage.setItem('gpxmod-tracks', JSON.stringify($scope.tracks));
@@ -220,6 +215,17 @@ app.controller('TrackController', function($scope) {
     }
   }
 
+  function updateSelectedTrackGPX(newGpx, newSelectedPointIndex, onLoaded) {
+    $scope.selectedPointIndex = -1;
+    $scope.selection.track.gpx = newGpx;
+    $scope.addTrackToMap($scope.selection.track, function(track) {
+      $scope.selectedPointIndex = newSelectedPointIndex;
+      if(onLoaded != null) {
+        onLoaded(track);
+      }
+    });
+  }
+
   $scope.trimTrack = function(where) {
     var parser = new DOMParser();
 
@@ -234,18 +240,14 @@ app.controller('TrackController', function($scope) {
       updateMarkIndices($scope.selection.track, function(oldIndex) {
         return oldIndex - $scope.selection.point.index;
       });
-      $scope.selectedPointIndex = -1;
-      $scope.selection.track.gpx = new XMLSerializer().serializeToString(doc);
-      $scope.addTrackToMap($scope.selection.track, false, 0);
+      updateSelectedTrackGPX(new XMLSerializer().serializeToString(doc), 0, null);
     } else if(where === 'after') {
       var lenBefore = trkseg.children.length;
       for(var i = trkseg.children.length - 1; i > $scope.selection.point.index; i--) {
         trkseg.removeChild(trkseg.children[i]);
         $scope.removeMark($scope.selection.track, i);
       }
-      $scope.selection.track.gpx = new XMLSerializer().serializeToString(doc);
-      $scope.addTrackToMap($scope.selection.track, false, $scope.selectedPointIndex);
-      $scope.selectedPointIndex = -1;
+      updateSelectedTrackGPX(new XMLSerializer().serializeToString(doc), $scope.selectedPointIndex, null);
     } else {
       console.log('where must be either before or after, was ' + where);
       return;
@@ -271,9 +273,7 @@ app.controller('TrackController', function($scope) {
     });
 
     var newSelectionIndex = buffer.length - 1 - $scope.selection.point.index;
-    $scope.selectedPointIndex = -1;
-    $scope.selection.track.gpx = new XMLSerializer().serializeToString(doc);
-    $scope.addTrackToMap($scope.selection.track, false, newSelectionIndex);
+    updateSelectedTrackGPX(new XMLSerializer().serializeToString(doc), newSelectionIndex, null);
   };
 
   $scope.mergeTrack = function(direction, other) {
@@ -284,22 +284,29 @@ app.controller('TrackController', function($scope) {
 
     var trksegOther = parser.parseFromString(other.gpx, 'text/xml').getElementsByTagName('trkseg')[0];
 
+    var newMarkIndices = [];
+
     if(direction === 'prepend') {
       console.log('not implemented yet');
     } else if(direction === 'append') {
       for(var i = 0; i < trksegOther.children.length; i++) {
         trkseg.appendChild(trksegOther.children[i].cloneNode(true));
+        if(other.marks[i] != null) {
+          newMarkIndices.push($scope.selection.track.numPoints + i);
+        }
       }
     } else {
       console.log('direction must be either prepend or append, was ' + where);
       return;
     }
 
-    var selectionIndex = $scope.selection.point.index;
-    $scope.selectedPointIndex = -1;
     $scope.selection.track.name = 'merged.gpx';
-    $scope.selection.track.gpx = new XMLSerializer().serializeToString(doc);
-    $scope.addTrackToMap($scope.selection.track, false, selectionIndex);
+    var newSelectionIndex = $scope.selection.point.index;
+    updateSelectedTrackGPX(new XMLSerializer().serializeToString(doc), newSelectionIndex, function(track) {
+      for(var i = 0; i < newMarkIndices.length; i++) {
+        $scope.addMark(track, newMarkIndices[i]);
+      }
+    });
   };
 
   $scope.downloadTrack = function(track) {
