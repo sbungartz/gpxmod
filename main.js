@@ -3,7 +3,7 @@
 var app = angular.module('gpxmod', []);
 
 function downloadXml(filename, data) {
-  var blob = new Blob([data], {type: 'text/xml'});
+  var blob = new Blob([data], {type: 'application/xml'});
   if(window.navigator.msSaveOrOpenBlob) {
     window.navigator.msSaveBlob(blob, filename);
   }
@@ -235,15 +235,23 @@ app.controller('TrackController', function($scope) {
     });
   }
 
+  function removeNodeWithWhitespace(node) {
+    if(node.previousSibling && node.previousSibling.nodeType == Node.TEXT_NODE) {
+      node.previousSibling.remove();
+    }
+    node.remove();
+    return node;
+  }
+
   $scope.trimTrack = function(where) {
     var parser = new DOMParser();
 
-    var doc = parser.parseFromString($scope.selection.track.gpx, 'text/xml');
+    var doc = parser.parseFromString($scope.selection.track.gpx, 'application/xml');
     var trkseg = doc.getElementsByTagName('trkseg')[0];
 
     if(where === 'before') {
       for(var i = $scope.selection.point.index - 1; i >= 0; i--) {
-        trkseg.removeChild(trkseg.children[i]);
+        removeNodeWithWhitespace(trkseg.children[i]);
         $scope.removeMark($scope.selection.track, i);
       }
       updateMarkIndices($scope.selection.track, function(oldIndex) {
@@ -253,7 +261,7 @@ app.controller('TrackController', function($scope) {
     } else if(where === 'after') {
       var lenBefore = trkseg.children.length;
       for(var i = trkseg.children.length - 1; i > $scope.selection.point.index; i--) {
-        trkseg.removeChild(trkseg.children[i]);
+        removeNodeWithWhitespace(trkseg.children[i]);
         $scope.removeMark($scope.selection.track, i);
       }
       updateSelectedTrackGPX(new XMLSerializer().serializeToString(doc), $scope.selectedPointIndex, null);
@@ -265,12 +273,12 @@ app.controller('TrackController', function($scope) {
 
   $scope.flipTrack = function() {
     var parser = new DOMParser();
-    var doc = parser.parseFromString($scope.selection.track.gpx, 'text/xml');
+    var doc = parser.parseFromString($scope.selection.track.gpx, 'application/xml');
     var trkseg = doc.getElementsByTagName('trkseg')[0];
 
     var buffer = [];
     while(trkseg.children.length > 0) {
-      buffer.push(trkseg.removeChild(trkseg.children[0]));
+      buffer.push(removeNodeWithWhitespace(trkseg.children[0]));
     }
 
     for(var i = buffer.length - 1; i >= 0; i--) {
@@ -288,10 +296,10 @@ app.controller('TrackController', function($scope) {
   $scope.mergeTrack = function(direction, other) {
     var parser = new DOMParser();
 
-    var doc = parser.parseFromString($scope.selection.track.gpx, 'text/xml');
+    var doc = parser.parseFromString($scope.selection.track.gpx, 'application/xml');
     var trkseg = doc.getElementsByTagName('trkseg')[0];
 
-    var trksegOther = parser.parseFromString(other.gpx, 'text/xml').getElementsByTagName('trkseg')[0];
+    var trksegOther = parser.parseFromString(other.gpx, 'application/xml').getElementsByTagName('trkseg')[0];
 
     var newMarkIndices = [];
 
@@ -355,14 +363,14 @@ app.controller('TrackController', function($scope) {
 
     var parser = new DOMParser();
     var serializer = new XMLSerializer();
-    var docOrig = parser.parseFromString(track.gpx, 'text/xml');
+    var docOrig = parser.parseFromString(track.gpx, 'application/xml');
     var trksegOrig = docOrig.getElementsByTagName('trkseg')[0];
 
     // First, create a copy of the original document, with an empty trkseg
     var docPlain = docOrig.cloneNode(true);
     var trksegPlain = docPlain.getElementsByTagName('trkseg')[0];
     while(trksegPlain.children.length > 0) {
-      trksegPlain.removeChild(trksegPlain.children[0]);
+      removeNodeWithWhitespace(trksegPlain.children[0]);
     }
 
     var partEnds = [];
@@ -374,7 +382,6 @@ app.controller('TrackController', function($scope) {
     }
     partEnds.sort();
     partEnds.push(track.numPoints - 1);
-    console.log(partEnds);
 
     var partNum = 1;
     var nextPartStart = 0;
