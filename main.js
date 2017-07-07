@@ -397,6 +397,12 @@ app.controller('TrackController', function($scope) {
   $scope.downloadTrack = function(track) {
     downloadXml(track.name + '.gpx', track.gpx);
   };
+
+  $scope.downloadAllTracks = function() {
+    for(var i = 0; i < $scope.tracks.length; i++) {
+      $scope.downloadTrack($scope.tracks[i]);
+    }
+  };
 });
 
 app.directive("gpxTrackUpload",function(){    
