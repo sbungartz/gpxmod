@@ -354,6 +354,10 @@ app.controller('TrackController', function($scope) {
     return s;
   }
 
+  function compareInt(a, b) {
+    return a - b;
+  }
+
   $scope.splitTrackAtMarks = function(track) {
     if(track.marks.length == 0) {
       return;
@@ -378,9 +382,9 @@ app.controller('TrackController', function($scope) {
     var numParts = 1;
     for(var i in track.marks) {
       numParts++;
-      partEnds.push(i);
+      partEnds.push(track.marks[i].point.index);
     }
-    partEnds.sort();
+    partEnds.sort(compareInt);
     partEnds.push(track.numPoints - 1);
 
     var partNum = 1;
