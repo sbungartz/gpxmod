@@ -21,6 +21,7 @@ function downloadXml(filename, data) {
 app.controller('TrackController', function($scope) {
   var color_palette = ['red', 'blue', 'green', 'yellow', 'magenta', 'cyan'];
   var next_color_index = 0;
+  var next_track_id = 0;
 
   function nextColorFromPalette() {
     var color = color_palette[next_color_index];
@@ -134,6 +135,7 @@ app.controller('TrackController', function($scope) {
 
   $scope.newGpxTrackLoaded = function(filename, filecontent) {
     var newTrack = {
+      id: next_track_id++,
       name: filename,
       gpx: filecontent,
       color: nextColorFromPalette()
