@@ -37,7 +37,7 @@
 
           <ul class="list-unstyled">
             <li ng-repeat="track in tracks track by track.name">
-              <span class="glyphicon glyphicon-minus" style="color: {{color_palette[track.index % color_palette.length]}};"></span>
+              <span class="glyphicon glyphicon-minus" style="color: {{track.color}};"></span>
               {{track.name}}
               <span ng-show="track.distance">- {{track.distance | number: 2}} m</span>
               <!-- <button type="button" class="btn btn-link btn-xs">

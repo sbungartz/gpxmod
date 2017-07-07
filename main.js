@@ -20,9 +20,13 @@ function downloadXml(filename, data) {
 
 app.controller('TrackController', function($scope) {
   var color_palette = ['red', 'blue', 'green', 'yellow', 'magenta', 'cyan'];
-  $scope.color_palette = color_palette;
+  var next_color_index = 0;
 
-  var trackLayers = {};
+  function nextColorFromPalette() {
+    var color = color_palette[next_color_index];
+    next_color_index = (next_color_index + 1) % color_palette.length;
+    return color;
+  }
 
   var trackPosMarker = L.circleMarker([0, 0], { radius: 7 });
 
@@ -61,7 +65,7 @@ app.controller('TrackController', function($scope) {
 
   $scope.$watchCollection('selection', function(newSelection, oldSelection) {
     if(newSelection && newSelection.point.latlng) {
-      trackPosMarker.setLatLng(newSelection.point.latlng).setStyle({color: trackLayers[newSelection.track.index].options.color}).addTo(map);
+      trackPosMarker.setLatLng(newSelection.point.latlng).setStyle({color: track.color}).addTo(map);
       $scope.selectedPointIndex = newSelection.point.index;
     }
   });
@@ -78,7 +82,7 @@ app.controller('TrackController', function($scope) {
 
   $scope.$watch('selectedPointIndex', function(newIndex, oldIndex) {
     if(newIndex !== undefined && newIndex >= 0 && $scope.selection) {
-      var newLatLng = trackLayers[$scope.selection.track.index].getLatLngs()[newIndex];
+      var newLatLng = track.line.getLatLngs()[newIndex];
       $scope.selection.point = {
         index: newIndex,
         latlng: newLatLng,
@@ -95,19 +99,17 @@ app.controller('TrackController', function($scope) {
         endIconUrl: null
       },
       polyline_options: {
-        color: color_palette[track.index % color_palette.length]
+        color: track.color
       }
     }).on('loaded', function(e) {
-      if(e.target.getLayers().length > 1) {
+      if(e.target.getLayers()[0].getLatLngs === null) {
         alert('oops, that gpx file has more than one sub track or some waypoints or something. not sure i can handle that in this alpha stage...'); 
       }
       track.libgpx = e.target;
       track.distance = track.libgpx.get_distance();
       track.numPoints = track.libgpx.getLayers()[0].getLatLngs().length;
-      if(trackLayers[track.index]) {
-        map.removeLayer(trackLayers[track.index]);
-      }
-      trackLayers[track.index] = e.target.getLayers()[0];
+      track.line = e.target.getLayers()[0];
+
       if(focusTrack) {
         map.fitBounds(e.target.getBounds());
       }
@@ -134,7 +136,7 @@ app.controller('TrackController', function($scope) {
     var newTrack = {
       name: filename,
       gpx: filecontent,
-      index: $scope.tracks.length
+      color: nextColorFromPalette()
     };
 
     $scope.addTrackToMap(newTrack, true, null);
