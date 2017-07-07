@@ -167,7 +167,7 @@ app.controller('TrackController', function($scope) {
     if(trackIndex >= 0) {
       $scope.tracks.splice(trackIndex, 1);
     }
-    if($scope.selection.track.id === track.id) {
+    if($scope.selection && $scope.selection.track.id === track.id) {
       $scope.selection = null;
     }
 
