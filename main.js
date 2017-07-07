@@ -373,9 +373,7 @@ app.controller('TrackController', function($scope) {
     // First, create a copy of the original document, with an empty trkseg
     var docPlain = docOrig.cloneNode(true);
     var trksegPlain = docPlain.getElementsByTagName('trkseg')[0];
-    while(trksegPlain.children.length > 0) {
-      removeNodeWithWhitespace(trksegPlain.children[0]);
-    }
+    trksegPlain.parentNode.replaceChild(trksegPlain.cloneNode(false), trksegPlain);
 
     var partEnds = [];
 
