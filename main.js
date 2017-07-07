@@ -339,6 +339,13 @@ app.controller('TrackController', function($scope) {
     }
   };
 
+  function padWithLeadingZeros(number, maxNumber) {
+    var size = maxNumber.toString().length;
+    var s = number.toString();
+    while (s.length < size) s = "0" + s;
+    return s;
+  }
+
   $scope.splitTrackAtMarks = function(track) {
     if(track.marks.length == 0) {
       return;
@@ -358,20 +365,31 @@ app.controller('TrackController', function($scope) {
       trksegPlain.removeChild(trksegPlain.children[0]);
     }
 
+    var partEnds = [];
+
+    var numParts = 1;
+    for(var i in track.marks) {
+      numParts++;
+      partEnds.push(i);
+    }
+    partEnds.sort();
+    partEnds.push(track.numPoints - 1);
+    console.log(partEnds);
+
     var partNum = 1;
     var nextPartStart = 0;
-    for(var markIndex in track.marks) {
-      var mark = track.marks[markIndex];
+    for(var partEndIndex = 0; partEndIndex < partEnds.length; partEndIndex++) {
+      var partEnd = partEnds[partEndIndex];
       // Now clone the document with cleared trkseg, so we can put the trkpts of this part into it.
       var docPart = docPlain.cloneNode(true);
       var trksegPart = docPart.getElementsByTagName('trkseg')[0];
-      for(var i = nextPartStart; i <= mark.point.index; i++) {
+      for(var i = nextPartStart; i <= partEnd; i++) {
         trksegPart.appendChild(trksegOrig.children[i].cloneNode(true));
       }
 
-      $scope.newGpxTrackLoaded(track.name + '-' + partNum, serializer.serializeToString(docPart), false);
+      $scope.newGpxTrackLoaded(track.name + '-' + padWithLeadingZeros(partNum, numParts), serializer.serializeToString(docPart), false);
 
-      nextPartStart = mark.point.index;
+      nextPartStart = partEnd;
       partNum += 1;
     }
   };
