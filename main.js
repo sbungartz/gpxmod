@@ -443,3 +443,9 @@ app.directive("gpxTrackUpload",function(){
     }        
   }
 });
+
+app.filter("fixedNumber", function() {
+  return function(value, precision) {
+    return value.toFixed(precision);
+  }
+});

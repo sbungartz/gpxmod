@@ -80,7 +80,7 @@
             <form class="form form-inline">
               <button class="btn btn-default" ng-click="placeRegularMarksOnTrack(selection.track)">Place Marks</button>
               every
-              <input class="form-control" type="number" min="0" max="{{(selection.track.distance || 0) | number: 2}}" step="0.01" ng-model="splitMarkerInterval" />
+              <input class="form-control" type="number" min="0" max="{{(selection.track.distance || 0) | fixedNumber: 2}}" step="0.01" ng-model="splitMarkerInterval" />
               km
               <p class="help-block">Note: Placing regular spaced marks discards all other marks!</p>
             </form>
