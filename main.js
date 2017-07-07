@@ -106,6 +106,9 @@ app.controller('TrackController', function($scope) {
       if(e.target.getLayers()[0].getLatLngs == null) {
         alert('oops, that gpx file has more than one sub track or some waypoints or something. not sure i can handle that in this alpha stage...'); 
       }
+      if(track.libgpx != null) {
+        map.removeLayer(track.libgpx);
+      }
       track.libgpx = e.target;
       track.distance = track.libgpx.get_distance();
       track.line = track.libgpx.getLayers()[0];
