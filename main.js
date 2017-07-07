@@ -317,7 +317,7 @@ app.controller('TrackController', function($scope) {
       return;
     }
 
-    $scope.selection.track.name = 'merged.gpx';
+    $scope.selection.track.name = 'merged';
     var newSelectionIndex = $scope.selection.point.index;
     updateSelectedTrackGPX(new XMLSerializer().serializeToString(doc), newSelectionIndex, function(track) {
       for(var i = 0; i < newMarkIndices.length; i++) {
