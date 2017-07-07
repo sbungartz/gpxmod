@@ -40,9 +40,9 @@
               <span class="glyphicon glyphicon-minus" style="color: {{track.color}};"></span>
               {{track.name}}
               <span ng-show="track.distance">- {{track.distance | number: 2}} m</span>
-              <!-- <button type="button" class="btn btn-link btn-xs">
+              <button type="button" class="btn btn-link btn-xs" ng-click="removeTrack(track)">
                 <span class="glyphicon glyphicon-trash"></span>
-              </button> -->
+              </button>
               <button type="button" class="btn btn-link btn-xs" ng-click="downloadTrack(track)">
                 <span class="glyphicon glyphicon-save"></span>
               </button>

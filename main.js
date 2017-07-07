@@ -68,6 +68,8 @@ app.controller('TrackController', function($scope) {
     if(newSelection && newSelection.point.latlng) {
       trackPosMarker.setLatLng(newSelection.point.latlng).setStyle({color: newSelection.track.color}).addTo(map);
       $scope.selectedPointIndex = newSelection.point.index;
+    } else {
+      map.removeLayer(trackPosMarker);
     }
   });
 
@@ -150,6 +152,24 @@ app.controller('TrackController', function($scope) {
     //localStorage.setItem('gpxmod-tracks', JSON.stringify($scope.tracks));
 
     $scope.$digest();
+  };
+
+  $scope.removeTrack = function(track) {
+    var trackIndex = -1;
+    for(var i = 0; i < $scope.tracks.length; i++) {
+      if($scope.tracks[i].id === track.id) {
+        trackIndex = i;
+        break;
+      }
+    }
+    if(trackIndex >= 0) {
+      $scope.tracks.splice(trackIndex, 1);
+    }
+    if($scope.selection.track.id === track.id) {
+      $scope.selection = null;
+    }
+
+    map.removeLayer(track.libgpx);
   };
 
   $scope.trimTrack = function(where) {
