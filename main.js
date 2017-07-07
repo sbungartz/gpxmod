@@ -66,7 +66,7 @@ app.controller('TrackController', function($scope) {
 
   $scope.$watchCollection('selection', function(newSelection, oldSelection) {
     if(newSelection && newSelection.point.latlng) {
-      trackPosMarker.setLatLng(newSelection.point.latlng).setStyle({color: track.color}).addTo(map);
+      trackPosMarker.setLatLng(newSelection.point.latlng).setStyle({color: newSelection.track.color}).addTo(map);
       $scope.selectedPointIndex = newSelection.point.index;
     }
   });
@@ -83,7 +83,7 @@ app.controller('TrackController', function($scope) {
 
   $scope.$watch('selectedPointIndex', function(newIndex, oldIndex) {
     if(newIndex !== undefined && newIndex >= 0 && $scope.selection) {
-      var newLatLng = track.line.getLatLngs()[newIndex];
+      var newLatLng = $scope.selection.track.line.getLatLngs()[newIndex];
       $scope.selection.point = {
         index: newIndex,
         latlng: newLatLng,
@@ -103,13 +103,13 @@ app.controller('TrackController', function($scope) {
         color: track.color
       }
     }).on('loaded', function(e) {
-      if(e.target.getLayers()[0].getLatLngs === null) {
+      if(e.target.getLayers()[0].getLatLngs == null) {
         alert('oops, that gpx file has more than one sub track or some waypoints or something. not sure i can handle that in this alpha stage...'); 
       }
       track.libgpx = e.target;
       track.distance = track.libgpx.get_distance();
-      track.numPoints = track.libgpx.getLayers()[0].getLatLngs().length;
-      track.line = e.target.getLayers()[0];
+      track.line = track.libgpx.getLayers()[0];
+      track.numPoints = track.line.getLatLngs().length;
 
       if(focusTrack) {
         map.fitBounds(e.target.getBounds());

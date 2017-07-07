@@ -55,7 +55,7 @@
           </p>
           <div ng-show="selection">
             <div>
-              <span class="glyphicon glyphicon-minus" ng-style="{'color': color_palette[selection.track.index % color_palette.length]}"></span>
+              <span class="glyphicon glyphicon-minus" ng-style="{'color': selection.track.color}"></span>
               <small>{{selection.track.name}}</small>
             </div>
 
@@ -75,8 +75,8 @@
             <h4>Merge tracks</h4>
 
             <ul class="list-unstyled">
-              <li ng-repeat="track in tracks | filter: { index: '!' + selection.track.index } track by track.name">
-                <span class="glyphicon glyphicon-minus" style="color: {{color_palette[track.index % color_palette.length]}};"></span>
+              <li ng-repeat="track in tracks | filter: { id: '!' + selection.track.id } track by track.id">
+                <span class="glyphicon glyphicon-minus" style="color: {{track.color}};"></span>
                 {{track.name}}
                 <button class="btn btn-default btn-xs" ng-click="mergeTrack('prepend', track)">Prepend</button>
                 <button class="btn btn-default btn-xs" ng-click="mergeTrack('append', track)">Append</button>
