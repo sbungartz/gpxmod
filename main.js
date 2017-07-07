@@ -135,7 +135,7 @@ app.controller('TrackController', function($scope) {
     });
   };
 
-  $scope.newGpxTrackLoaded = function(filename, filecontent) {
+  $scope.newGpxTrackLoaded = function(filename, filecontent, zoomToFit) {
     var newTrack = {
       id: next_track_id++,
       name: filename,
@@ -145,13 +145,13 @@ app.controller('TrackController', function($scope) {
     };
 
     $scope.addTrackToMap(newTrack, function(track) {
-      map.fitBounds(track.libgpx.getBounds());
+      if(zoomToFit) {
+        map.fitBounds(track.libgpx.getBounds());
+      }
     });
 
     $scope.tracks.push(newTrack);
     //localStorage.setItem('gpxmod-tracks', JSON.stringify($scope.tracks));
-
-    $scope.$digest();
   };
 
   $scope.removeTrack = function(track) {
@@ -203,6 +203,12 @@ app.controller('TrackController', function($scope) {
     if(track.marks[index] != null) {
       map.removeLayer(track.marks[index].marker);
       delete track.marks[index];
+    }
+  };
+
+  $scope.clearMarks = function(track) {
+    for(var i in track.marks) {
+      $scope.removeMark(track, i);
     }
   };
 
@@ -318,9 +324,7 @@ app.controller('TrackController', function($scope) {
     }
 
     var newInterval = $scope.splitMarkerInterval;
-    for(var i in track.marks) {
-      $scope.removeMark(track, i);
-    }
+    $scope.clearMarks(track);
 
     if($scope.splitMarkerInterval == 0) {
       return;
@@ -335,8 +339,45 @@ app.controller('TrackController', function($scope) {
     }
   };
 
+  $scope.splitTrackAtMarks = function(track) {
+    if(track.marks.length == 0) {
+      return;
+    }
+
+    $scope.removeTrack(track);
+
+    var parser = new DOMParser();
+    var serializer = new XMLSerializer();
+    var docOrig = parser.parseFromString(track.gpx, 'text/xml');
+    var trksegOrig = docOrig.getElementsByTagName('trkseg')[0];
+
+    // First, create a copy of the original document, with an empty trkseg
+    var docPlain = docOrig.cloneNode(true);
+    var trksegPlain = docPlain.getElementsByTagName('trkseg')[0];
+    while(trksegPlain.children.length > 0) {
+      trksegPlain.removeChild(trksegPlain.children[0]);
+    }
+
+    var partNum = 1;
+    var nextPartStart = 0;
+    for(var markIndex in track.marks) {
+      var mark = track.marks[markIndex];
+      // Now clone the document with cleared trkseg, so we can put the trkpts of this part into it.
+      var docPart = docPlain.cloneNode(true);
+      var trksegPart = docPart.getElementsByTagName('trkseg')[0];
+      for(var i = nextPartStart; i <= mark.point.index; i++) {
+        trksegPart.appendChild(trksegOrig.children[i].cloneNode(true));
+      }
+
+      $scope.newGpxTrackLoaded(track.name + '-' + partNum, serializer.serializeToString(docPart), false);
+
+      nextPartStart = mark.point.index;
+      partNum += 1;
+    }
+  };
+
   $scope.downloadTrack = function(track) {
-    downloadXml(track.name, track.gpx);
+    downloadXml(track.name + '.gpx', track.gpx);
   };
 });
 
@@ -360,7 +401,10 @@ app.directive("gpxTrackUpload",function(){
 
           var filecontent = evt.target.result;
 
-          $scope.newGpxTrackLoaded(file.name, filecontent);
+          var fileNameWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
+
+          $scope.newGpxTrackLoaded(fileNameWithoutExtension, filecontent, true);
+          $scope.$digest();
         }
 
         reader.readAsText(file);
